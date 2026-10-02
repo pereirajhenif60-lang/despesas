@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - Controle de Despesas</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+<body>
+  <header>
+    <div class="container-inner" style="justify-content: center;">
+      <h1>Controle de Despesas</h1>
+    </div>
+  </header>
+
+  <main class="auth-layout">
+    <section class="auth-card">
+      <h2>Entrar</h2>
+      {% if mensagem_login %}
+      <p class="message error">{{ mensagem_login }}</p>
+      {% endif %}
+      <form class="auth-form" method="post" action="{{ url_for('login') }}">
+        <label>
+          Usuário
+          <input type="text" name="username" required />
+        </label>
+        <label>
+          Senha
+          <input type="password" name="senha" required />
+        </label>
+        <button type="submit">Entrar</button>
+      </form>
+      <p class="small-note">
+        Ainda não tem conta?
+        <button id="show-register" type="button">Criar conta</button>
+      </p>
+    </section>
+
+    <section class="auth-card auth-register {% if not mensagem_cadastro %}hidden{% endif %}" id="register-card">
+      <h2>Cadastrar</h2>
+      {% if mensagem_cadastro %}
+      <p class="message error">{{ mensagem_cadastro }}</p>
+      {% endif %}
+      <form class="auth-form" method="post" action="{{ url_for('register') }}">
+        <label>
+          Usuário
+          <input type="text" name="username_cadastro" required />
+        </label>
+        <label>
+          Senha (mínimo 4 caracteres)
+          <input type="password" name="senha_cadastro" minlength="4" required />
+        </label>
+        <button type="submit">Criar conta</button>
+      </form>
+      <button class="link-button" id="hide-register" type="button">Voltar ao login</button>
+    </section>
+  </main>
+
+  <script>
+    const showRegister = document.getElementById("show-register");
+    const hideRegister = document.getElementById("hide-register");
+    const registerCard = document.getElementById("register-card");
+
+    showRegister?.addEventListener("click", () => {
+      registerCard.classList.remove("hidden");
+      registerCard.scrollIntoView({ behavior: "smooth" });
+    });
+
+    hideRegister?.addEventListener("click", () => {
+      registerCard.classList.add("hidden");
+    });
+  </script>
+</body>
+</html>

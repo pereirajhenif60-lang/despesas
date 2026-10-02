@@ -1,0 +1,12 @@
+{
+  "users": [
+    {
+      "username": "jhenif",
+      "senha": "scrypt:32768:8:1$yVa0ximPPuwslMOY$c54bf0acc84f4e0efdb9c749ab8355673d45f35364cb7de93ae66cdf468315af92e37ebed184fec71528ab7264bc921fa6fe36e486a7d58f0d0cce7335b592bc"
+    },
+    {
+      "username": "edna",
+      "senha": "scrypt:32768:8:1$PnnRFLX7FPY5LZFa$3676bccae9105485d0b843d10463dc575778c064d4cba96f0ea97007a4949234bf0ea4a7175c00d9268eec33ff8d2af633c0a3505e49335b18175223da3534b8"
+    }
+  ]
+}

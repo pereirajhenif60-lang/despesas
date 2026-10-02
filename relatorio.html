@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Relatório de Despesas</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+<body>
+  <header>
+    <div class="container-inner">
+      <div class="header-left">
+        <h1>Relatório de Despesas</h1>
+        <p class="user-info">Usuário: {{ usuario }}</p>
+      </div>
+      <nav>
+        <a href="{{ url_for('home') }}">Voltar ao painel</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>Filtros</h2>
+      <form class="menu-form" method="get" action="{{ url_for('relatorio') }}">
+        <select name="categoria">
+          <option value="">Todas</option>
+          {% for cat in categorias %}
+            <option value="{{ cat }}" {% if cat == categoria_selecionada %}selected{% endif %}>{{ cat }}</option>
+          {% endfor %}
+        </select>
+
+        <select name="mes">
+          <option value="">Todos</option>
+          {% for m in meses %}
+            <option value="{{ m }}" {% if m == mes_selecionado %}selected{% endif %}>{{ m }}</option>
+          {% endfor %}
+        </select>
+
+        <button type="submit">Filtrar</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Evolução mensal</h2>
+      <img src="{{ url_for('static', filename=grafico_relatorio) }}"
+           alt="Gráfico de despesas"
+           style="max-width:100%; height:auto; border-radius: 14px;">
+    </section>
+
+    <section class="card">
+      <h2>Despesas no período</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Descrição</th>
+            <th>Valor</th>
+            <th>Categoria</th>
+            <th>Mês</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for despesa in despesas %}
+            <tr>
+              <td>{{ despesa.descricao }}</td>
+              <td>R$ {{ "%.2f"|format(despesa.valor) }}</td>
+              <td><span class="badge">{{ despesa.categoria }}</span></td>
+              <td>{{ despesa.mes }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4" class="empty-state">Nenhuma despesa neste período.</td></tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="1"><strong>Total</strong></td>
+            <td colspan="3"><strong>R$ {{ "%.2f"|format(total) }}</strong></td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

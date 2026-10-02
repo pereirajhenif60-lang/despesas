@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle de Despesas</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+  <header>
+    <div class="container-inner">
+      <div class="header-left">
+        <h1>Controle de Despesas</h1>
+        <p class="user-info">Olá, {{ usuario }}</p>
+      </div>
+      <nav>
+        <a href="#nova-despesa">Adicionar</a>
+        <a href="#lista">Lista</a>
+        <a href="{{ url_for('relatorio') }}">Relatório</a>
+        <a class="logout" href="{{ url_for('logout') }}">Sair</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    {% with mensagens = get_flashed_messages(with_categories=true) %}
+      {% if mensagens %}
+      <ul class="flash-list">
+        {% for categoria_msg, texto in mensagens %}
+        <li class="flash {{ categoria_msg }}">{{ texto }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    {% endwith %}
+
+    <section class="summary-grid">
+      <div class="summary-card hero">
+        <p class="label">Total no filtro atual</p>
+        <p class="value">R$ {{ "%.2f"|format(resumo.total) }}</p>
+      </div>
+      <div class="summary-card">
+        <p class="label">Despesas lançadas</p>
+        <p class="value">{{ resumo.quantidade }}</p>
+      </div>
+      <div class="summary-card">
+        <p class="label">Média por mês ativo</p>
+        <p class="value">R$ {{ "%.2f"|format(resumo.media_mensal) }}</p>
+      </div>
+      <div class="summary-card">
+        <p class="label">Categoria que mais pesa</p>
+        <p class="value">{{ resumo.categoria_top }}</p>
+      </div>
+    </section>
+
+    <section class="card" id="filtros">
+      <div class="card-head">
+        <h2>Filtros</h2>
+        <a class="export-link" href="{{ url_for('exportar_despesas', categoria=categoria_selecionada, mes=mes_selecionado) }}">⬇ Exportar CSV</a>
+      </div>
+      <div class="chips">
+        <a class="chip {% if not categoria_selecionada %}active{% endif %}" href="{{ url_for('home', mes=mes_selecionado) }}">Todas as categorias</a>
+        {% for categoria in categorias %}
+        <a class="chip {% if categoria == categoria_selecionada %}active{% endif %}" href="{{ url_for('home', categoria=categoria, mes=mes_selecionado) }}">{{ categoria }}</a>
+        {% endfor %}
+      </div>
+      <form class="menu-form" method="get" action="/">
+        <select name="categoria">
+          <option value="">Todas as categorias</option>
+          {% for categoria in categorias %}
+          <option value="{{ categoria }}" {% if categoria == categoria_selecionada %}selected{% endif %}>{{ categoria }}</option>
+          {% endfor %}
+        </select>
+
+        <select name="mes">
+          <option value="">Todos os meses</option>
+          {% for mes in meses %}
+          <option value="{{ mes }}" {% if mes == mes_selecionado %}selected{% endif %}>{{ mes }}</option>
+          {% endfor %}
+        </select>
+
+        <button type="submit">Filtrar</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Visão geral</h2>
+      <div class="charts-grid">
+        <div class="chart-box">
+          <h3>Por categoria</h3>
+          {% if graficos.categorias_labels %}
+          <canvas id="grafico-categorias"></canvas>
+          {% else %}
+          <p class="empty-state">Sem despesas para mostrar ainda.</p>
+          {% endif %}
+        </div>
+        <div class="chart-box">
+          <h3>Ao longo do ano</h3>
+          <canvas id="grafico-meses"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="nova-despesa">
+      <h2 id="form-titulo">Adicionar nova despesa</h2>
+      <form class="menu-form" method="post" id="form-despesa" action="{{ url_for('post_despesas') }}">
+        <input type="hidden" name="despesa_id" id="despesa_id" value="" />
+        <input type="text" name="descricao" id="campo-descricao" placeholder="Descrição" required />
+        <input type="number" step="0.01" min="0.01" name="valor" id="campo-valor" placeholder="Valor" required />
+        <select name="categoria" id="campo-categoria" required>
+          <option value="">Selecionar categoria</option>
+          {% for categoria in categorias %}
+          <option value="{{ categoria }}">{{ categoria }}</option>
+          {% endfor %}
+        </select>
+        <input type="text" name="categoria_outra" id="campo-categoria-outra" placeholder="Qual categoria?" class="hidden" />
+        <select name="mes" id="campo-mes" required>
+          <option value="">Selecionar mês</option>
+          {% for mes in meses %}
+          <option value="{{ mes }}">{{ mes }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" id="botao-salvar">Cadastrar despesa</button>
+        <a href="#nova-despesa" class="link-cancel hidden" id="cancelar-edicao">Cancelar edição</a>
+      </form>
+    </section>
+
+    <section class="card" id="lista">
+      <h2>Lista de Despesas</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Descrição</th>
+            <th>Valor</th>
+            <th>Categoria</th>
+            <th>Mês</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for despesa in despesas %}
+          <tr>
+            <td>{{ despesa.descricao }}</td>
+            <td>R$ {{ "%.2f"|format(despesa.valor) }}</td>
+            <td><span class="badge">{{ despesa.categoria }}</span></td>
+            <td>{{ despesa.mes }}</td>
+            <td class="actions">
+              <button type="button" class="edit-btn"
+                data-id="{{ despesa.id }}"
+                data-descricao="{{ despesa.descricao }}"
+                data-valor="{{ despesa.valor }}"
+                data-categoria="{{ despesa.categoria }}"
+                data-mes="{{ despesa.mes }}">Editar</button>
+              <form method="post" action="{{ url_for('excluir_despesa', despesa_id=despesa.id) }}">
+                <button type="submit" class="delete-btn" onclick="return confirm('Excluir esta despesa?')">Excluir</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" class="empty-state">Nenhuma despesa encontrada para este filtro.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% if total_paginas > 1 %}
+      <nav class="pagination" aria-label="Paginação da lista de despesas">
+        <a class="page-link {% if pagina_atual == 1 %}disabled{% endif %}"
+           href="{{ url_for('home', categoria=categoria_selecionada, mes=mes_selecionado, pagina=pagina_atual - 1) }}">‹ Anterior</a>
+
+        <span class="page-info">Página {{ pagina_atual }} de {{ total_paginas }}</span>
+
+        <a class="page-link {% if pagina_atual == total_paginas %}disabled{% endif %}"
+           href="{{ url_for('home', categoria=categoria_selecionada, mes=mes_selecionado, pagina=pagina_atual + 1) }}">Próxima ›</a>
+      </nav>
+      {% endif %}
+      <form method="post" action="{{ url_for('limpar_despesas') }}" class="clear-form" onsubmit="return confirm('Isso vai apagar todas as suas despesas. Continuar?')">
+        <button type="submit">Limpar tudo</button>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    // Mostrar campo de categoria personalizada quando "Outros" for selecionado
+    const campoCategoria = document.getElementById('campo-categoria');
+    const campoCategoriaOutra = document.getElementById('campo-categoria-outra');
+    campoCategoria?.addEventListener('change', () => {
+      campoCategoriaOutra.classList.toggle('hidden', campoCategoria.value !== 'Outros');
+    });
+
+    // Edição inline: preenche o formulário e muda a ação para a rota de edição
+    const form = document.getElementById('form-despesa');
+    const tituloForm = document.getElementById('form-titulo');
+    const botaoSalvar = document.getElementById('botao-salvar');
+    const linkCancelar = document.getElementById('cancelar-edicao');
+    const rotaAdicionar = form.action;
+
+    document.querySelectorAll('.edit-btn').forEach(botao => {
+      botao.addEventListener('click', () => {
+        document.getElementById('despesa_id').value = botao.dataset.id;
+        document.getElementById('campo-descricao').value = botao.dataset.descricao;
+        document.getElementById('campo-valor').value = botao.dataset.valor;
+        document.getElementById('campo-mes').value = botao.dataset.mes;
+
+        const categoriasConhecidas = Array.from(campoCategoria.options).map(o => o.value);
+        if (categoriasConhecidas.includes(botao.dataset.categoria)) {
+          campoCategoria.value = botao.dataset.categoria;
+          campoCategoriaOutra.classList.add('hidden');
+        } else {
+          campoCategoria.value = 'Outros';
+          campoCategoriaOutra.value = botao.dataset.categoria;
+          campoCategoriaOutra.classList.remove('hidden');
+        }
+
+        form.action = `/despesas/editar/${botao.dataset.id}`;
+        tituloForm.textContent = 'Editar despesa';
+        tituloForm.classList.add('editando');
+        botaoSalvar.textContent = 'Salvar edição';
+        linkCancelar.classList.remove('hidden');
+        document.getElementById('nova-despesa').scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+
+    linkCancelar.addEventListener('click', (evento) => {
+      evento.preventDefault();
+      form.reset();
+      document.getElementById('despesa_id').value = '';
+      campoCategoriaOutra.classList.add('hidden');
+      form.action = rotaAdicionar;
+      tituloForm.textContent = 'Adicionar nova despesa';
+      tituloForm.classList.remove('editando');
+      botaoSalvar.textContent = 'Cadastrar despesa';
+      linkCancelar.classList.add('hidden');
+    });
+
+    // Gráficos
+    const coresCategorias = {{ graficos.categorias_cores|tojson }};
+    const labelsCategorias = {{ graficos.categorias_labels|tojson }};
+    const valoresCategorias = {{ graficos.categorias_valores|tojson }};
+
+    if (labelsCategorias.length) {
+      new Chart(document.getElementById('grafico-categorias'), {
+        type: 'doughnut',
+        data: {
+          labels: labelsCategorias,
+          datasets: [{
+            data: valoresCategorias,
+            backgroundColor: coresCategorias,
+            borderWidth: 0
+          }]
+        },
+        options: {
+          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { family: 'Manrope' } } } }
+        }
+      });
+    }
+
+    new Chart(document.getElementById('grafico-meses'), {
+      type: 'bar',
+      data: {
+        labels: {{ graficos.meses_labels|tojson }},
+        datasets: [{
+          label: 'Total (R$)',
+          data: {{ graficos.meses_valores|tojson }},
+          backgroundColor: '#a23659',
+          borderRadius: 6
+        }]
+      },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  </script>
+</body>
+</html>
